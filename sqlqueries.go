@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"strconv"
@@ -16,11 +17,27 @@ import (
 )
 
 func getEnvVariables(key string) string {
-	err := godotenv.Load(".env")
+	file, err := os.Open(".env")
+	defer file.Close()
 	if err != nil {
-		panic(err)
+		fmt.Println("No .env file found, creating a new one...")
+		envfile := "DB_USERNAME=\nDB_PASSWORD=\nDB_HOSTNAME=\nDB_TABLENAME="
+		os.Create(".env")
+		ioutil.WriteFile(".env", []byte(envfile), 0644)
+		fmt.Println("Done! Don't forget to update the .env file before running again!")
+		os.Exit(0)
+		return ""
+	} else {
+		err = godotenv.Load(".env")
+		if err != nil {
+			panic(err)
+		}
+		if os.Getenv(key) == "" {
+			fmt.Println("Empty env found, please edit the .env file")
+			os.Exit(0)
+		}
+		return os.Getenv(key)
 	}
-	return os.Getenv(key)
 }
 
 func hash(username string, password string) (hash string) {
