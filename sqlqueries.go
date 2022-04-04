@@ -17,9 +17,7 @@ import (
 )
 
 func getEnvVariables(key string) string {
-	file, err := os.Open(".env")
-	defer file.Close()
-	if err != nil {
+	if _, err := os.Stat(".env"); err != nil {
 		fmt.Println("No .env file found, creating a new one...")
 		envfile := "DB_USERNAME=\nDB_PASSWORD=\nDB_HOSTNAME=\nDB_TABLENAME="
 		os.Create(".env")
