@@ -16,7 +16,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func getEnvVariables(key string) string {
+//Gets the env variable from the .env file, if none exist it will create one.
+func getEnvVariables(envname string) string {
 	if _, err := os.Stat(".env"); err != nil {
 		fmt.Println("No .env file found, creating a new one...")
 		envfile := "DB_USERNAME=\nDB_PASSWORD=\nDB_HOSTNAME=\nDB_TABLENAME="
@@ -30,14 +31,15 @@ func getEnvVariables(key string) string {
 		if err != nil {
 			panic(err)
 		}
-		if os.Getenv(key) == "" {
+		if os.Getenv(envname) == "" {
 			fmt.Println("Empty env found, please edit the .env file")
 			os.Exit(0)
 		}
-		return os.Getenv(key)
+		return os.Getenv(envname)
 	}
 }
 
+//Hashes the username + password into one hash and encodes it.
 func hash(username string, password string) (hash string) {
 	bytes := []byte(username + password)
 	hasher := sha1.New()
@@ -46,6 +48,7 @@ func hash(username string, password string) (hash string) {
 	return hash
 }
 
+//Opens a database connection using the configured env's, returns database connection.
 func SqlConnect() (db *sql.DB) {
 	usernameSQL := getEnvVariables("DB_USERNAME")
 	passwordSQL := getEnvVariables("DB_PASSWORD")
@@ -58,7 +61,8 @@ func SqlConnect() (db *sql.DB) {
 	return db
 }
 
-func SqlRegister(db *sql.DB, username string, hash string, email string) (allowed bool) {
+//Registers the userdata into the database if the username and email are unique.
+func SqlRegister(db *sql.DB, username string, hash string, email string) (allowRegister bool) {
 	insertQuery := "INSERT INTO `users` (Username, Email, Authentication) VALUES (?, ?, ?)"
 	insert, err := db.Query(insertQuery, username, email, hash)
 	defer insert.Close()
@@ -69,7 +73,8 @@ func SqlRegister(db *sql.DB, username string, hash string, email string) (allowe
 	}
 }
 
-func SqlLogin(db *sql.DB, username string, hashed string) (allowed bool) {
+//Attempts to login the user with the username and password.
+func SqlLogin(db *sql.DB, username string, hashed string) (allowLogin bool) {
 	loginQuery := "SELECT Authentication FROM `users` WHERE Username = ?"
 	login, err := db.Query(loginQuery, username)
 	defer login.Close()
@@ -90,11 +95,12 @@ func SqlLogin(db *sql.DB, username string, hashed string) (allowed bool) {
 	}
 }
 
-func SqlCreateToken(db *sql.DB, username string, hashed string) (allowed bool) {
+//Creates a random token for specified user.
+func SqlCreateToken(db *sql.DB, username string) (allowCreateToken bool) {
 	createTokenQuery := "UPDATE `users` SET Token = ? WHERE Username = ?"
 	rand.Seed(time.Now().UnixNano())
 	random := strconv.Itoa(rand.Intn(1000))
-	token, err := db.Query(createTokenQuery, hash(hashed, random), username)
+	token, err := db.Query(createTokenQuery, hash(username, random), username)
 	defer token.Close()
 	if err != nil {
 		return false
@@ -103,7 +109,8 @@ func SqlCreateToken(db *sql.DB, username string, hashed string) (allowed bool) {
 	}
 }
 
-func SqlDeleteToken(db *sql.DB, username string) (allowed bool) {
+//Deletes the token for the user.
+func SqlDeleteToken(db *sql.DB, username string) (allowDeleteToken bool) {
 	deleteTokenQuery := "UPDATE `users` SET Token = NULL WHERE Username = ?"
 	delete, err := db.Query(deleteTokenQuery, username)
 	defer delete.Close()
@@ -114,7 +121,8 @@ func SqlDeleteToken(db *sql.DB, username string) (allowed bool) {
 	}
 }
 
-func SqlGetToken(db *sql.DB, username string) (allowed bool, tokenString string) {
+//Requests the token for the specified user from the database.
+func SqlGetToken(db *sql.DB, username string) (allowGetToken bool, tokenString string) {
 	getTokenQuery := "SELECT Token FROM `users` WHERE Username = ?"
 	token, err := db.Query(getTokenQuery, username)
 	defer token.Close()
