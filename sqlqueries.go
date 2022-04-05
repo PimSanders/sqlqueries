@@ -61,15 +61,45 @@ func SqlConnect() (db *sql.DB) {
 	return db
 }
 
-//Registers the userdata into the database if the username and email are unique.
-func SqlRegister(db *sql.DB, username string, password string, email string) (allowRegister bool) {
-	insertQuery := "INSERT INTO `users` (Username, Email, Authentication) VALUES (?, ?, ?)"
-	insert, err := db.Query(insertQuery, username, email, hash(username, password))
-	defer insert.Close()
+func sqlCheckIfExists(db *sql.DB, username string, email string) (userExists bool) {
+	getUsernameQuery := "SELECT Username FROM `users` WHERE Username = ?"
+	usernameSelect, err := db.Query(getUsernameQuery, username)
+	defer usernameSelect.Close()
 	if err != nil {
+		panic(err)
+	}
+	getEmailQuery := "SELECT Email FROM `users` WHERE Email = ?"
+	emailSelect, err := db.Query(getEmailQuery, email)
+	defer emailSelect.Close()
+	if err != nil {
+		panic(err)
+	}
+	var usernameSelectScan string
+	var emailSelectScan string
+	usernameSelect.Next()
+	emailSelect.Next()
+	usernameSelect.Scan(&usernameSelectScan)
+	emailSelect.Scan(&emailSelectScan)
+	if emailSelectScan == "" && usernameSelectScan == "" {
 		return false
 	} else {
 		return true
+	}
+}
+
+//Registers the userdata into the database if the username and email are unique.
+func SqlRegister(db *sql.DB, username string, password string, email string) (allowRegister bool) {
+	if sqlCheckIfExists(db, username, email) {
+		return false
+	} else {
+		insertQuery := "INSERT INTO `users` (Username, Email, Authentication) VALUES (?, ?, ?)"
+		insert, err := db.Query(insertQuery, username, email, hash(username, password))
+		defer insert.Close()
+		if err != nil {
+			return false
+		} else {
+			return true
+		}
 	}
 }
 
@@ -79,7 +109,7 @@ func SqlLogin(db *sql.DB, username string, password string) (allowLogin bool) {
 	login, err := db.Query(loginQuery, username)
 	defer login.Close()
 	if err != nil {
-		panic(err)
+		return false
 	}
 	login.Next()
 
