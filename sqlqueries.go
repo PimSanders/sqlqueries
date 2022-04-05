@@ -62,9 +62,9 @@ func SqlConnect() (db *sql.DB) {
 }
 
 //Registers the userdata into the database if the username and email are unique.
-func SqlRegister(db *sql.DB, username string, hash string, email string) (allowRegister bool) {
+func SqlRegister(db *sql.DB, username string, password string, email string) (allowRegister bool) {
 	insertQuery := "INSERT INTO `users` (Username, Email, Authentication) VALUES (?, ?, ?)"
-	insert, err := db.Query(insertQuery, username, email, hash)
+	insert, err := db.Query(insertQuery, username, email, hash(username, password))
 	defer insert.Close()
 	if err != nil {
 		return false
@@ -74,7 +74,7 @@ func SqlRegister(db *sql.DB, username string, hash string, email string) (allowR
 }
 
 //Attempts to login the user with the username and password.
-func SqlLogin(db *sql.DB, username string, hashed string) (allowLogin bool) {
+func SqlLogin(db *sql.DB, username string, password string) (allowLogin bool) {
 	loginQuery := "SELECT Authentication FROM `users` WHERE Username = ?"
 	login, err := db.Query(loginQuery, username)
 	defer login.Close()
@@ -86,11 +86,9 @@ func SqlLogin(db *sql.DB, username string, hashed string) (allowLogin bool) {
 	var passwordCheck string
 	login.Scan(&passwordCheck)
 
-	if hashed == passwordCheck {
-		fmt.Println("You are in da mainframe")
+	if hash(username, password) == passwordCheck {
 		return true
 	} else {
-		fmt.Println("Authentication error")
 		return false
 	}
 }
