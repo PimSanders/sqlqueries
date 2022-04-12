@@ -192,3 +192,26 @@ func SqlGetToken(db *sql.DB, username string) (allowGetToken bool, tokenString s
 		}
 	}
 }
+
+//Checks if the given token is in the database.
+func SqlCheckToken(db *sql.DB, inputToken string) (allowCheckToken bool) {
+	//SELECTS Token FROM users table for the token and returns the token.
+	checkTokenQuery := "SELECT Token FROM `users` WHERE Token = ?"
+	token, err := db.Query(checkTokenQuery, inputToken)
+	defer token.Close()
+	if err != nil {
+		return false
+	} else {
+		token.Next()
+
+		var tokenString string
+		token.Scan(&tokenString)
+
+		if tokenString == "" {
+			return false
+		} else {
+			return true
+		}
+	}
+
+}
