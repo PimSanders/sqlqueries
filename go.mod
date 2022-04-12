@@ -1,4 +1,4 @@
-module github.com/BumbleB-NL/sqlqueries
+module github.com/PimSanders/sqlqueries
 
 go 1.17
 
